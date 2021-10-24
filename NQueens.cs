@@ -8,7 +8,19 @@ namespace NQueens_GeneticAlgorithm
     {
         private int _boardSize, _initialPopulationSize, _selectionFactor, _crossover;
 
-        public NQueens(int n = 8, int initialPopulation = 100, int selectionFactor=20)
+        private struct GeneticInformation
+        {
+            public List<int> GenerationGenes;
+            public int Fitness;
+
+            public GeneticInformation(List<int> generationGenes, int fitness)
+            {
+                GenerationGenes = generationGenes;
+                Fitness = fitness;
+            }
+        }
+
+        public NQueens(int n = 8, int initialPopulation = 100, int selectionFactor = 20)
         {
             _boardSize = n;
             _initialPopulationSize = initialPopulation;
@@ -18,29 +30,28 @@ namespace NQueens_GeneticAlgorithm
 
         public void ShowQueensOnBoard()
         {
-            var generations = new List<(List<int> generation, int fitness)>(); // list of tuples (list + int)
+            var generations = new List<GeneticInformation>();
             for (int i = 0; i < _initialPopulationSize; i++) 
             {
                 var gen = GetRandomGeneration();
                 var fitness = GetUnderAttackFitness(gen);
-                generations.Add((gen, fitness));
+                generations.Add(new GeneticInformation(gen, fitness));
             }
 
-            generations = generations.OrderBy(x => x.fitness).ToList();
+            generations = generations.OrderBy(x => x.Fitness).ToList();
             generations = generations.Take(_selectionFactor).ToList();
 
-            while (generations[0].fitness != 0)
+            while (generations[0].Fitness != 0)
             {
-                var newGenerations = new List<(List<int> generation, int fitness)>();
+                var newGenerations = new List<GeneticInformation>();
                 var rand = new Random();
                 for (int i = 0; i < _selectionFactor; i += 2) 
                 {
-                    var firstChild = generations[i].generation.Take(_crossover).ToList();
-                    firstChild.AddRange(generations[i + 1].generation.Skip(_crossover).ToList());
+                    var firstChild = generations[i].GenerationGenes.Take(_crossover).ToList();
+                    firstChild.AddRange(generations[i + 1].GenerationGenes.Skip(_crossover).ToList());
 
-                    var secondChild = generations[i].generation.Skip(_crossover).ToList();
-                    secondChild.AddRange(generations[i + 1].generation.Take(_crossover).ToList());
-
+                    var secondChild = generations[i].GenerationGenes.Skip(_crossover).ToList();
+                    secondChild.AddRange(generations[i + 1].GenerationGenes.Take(_crossover).ToList());
 
                     var mutatingIndexFirstChild = rand.Next(_boardSize);
                     var mutatingIndexSecondChild = rand.Next(_boardSize);
@@ -48,15 +59,15 @@ namespace NQueens_GeneticAlgorithm
                     firstChild[mutatingIndexFirstChild] = rand.Next(_boardSize);
                     secondChild[mutatingIndexSecondChild] = rand.Next(_boardSize);
 
-                    newGenerations.Add((firstChild, GetUnderAttackFitness(firstChild)));
-                    newGenerations.Add((secondChild, GetUnderAttackFitness(secondChild)));
+                    newGenerations.Add(new GeneticInformation(firstChild, GetUnderAttackFitness(firstChild)));
+                    newGenerations.Add(new GeneticInformation(secondChild, GetUnderAttackFitness(secondChild)));
                 }
 
-                generations = new List<(List<int> generation, int fitness)>(newGenerations);
-                generations = generations.OrderBy(x => x.fitness).ToList();
+                generations = new List<GeneticInformation>(newGenerations);
+                generations = generations.OrderBy(x => x.Fitness).ToList();
             }
 
-            ShowValidBoard(generations[0].generation);
+            ShowValidBoard(generations[0].GenerationGenes);
         }
 
         private void ShowValidBoard(List<int> generation)
@@ -67,6 +78,7 @@ namespace NQueens_GeneticAlgorithm
                 board[generation[col], col] = 1;
             }
 
+            Console.WriteLine(" Correct table positioning: ");
             for (int i = 0; i < _boardSize; i++)
             {
                 for (int j = 0; j < _boardSize; j++)
@@ -108,14 +120,14 @@ namespace NQueens_GeneticAlgorithm
                 for (int j = 0; j < _boardSize; j++) 
                 {
                     if (board[i, j] == 1)
-                        underAttack += SearchDiagonals(board, i, j);
+                        underAttack += GetFitnessOnDiagonals(board, i, j);
                 }
             }
 
             return underAttack;
         }
 
-        private int SearchDiagonals(int[,] board, int y, int x)
+        private int GetFitnessOnDiagonals(int[,] board, int y, int x)
         {
             int underAttack = 0;
 
